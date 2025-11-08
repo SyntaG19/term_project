@@ -2,8 +2,8 @@ import pandas as pd
 from pathlib import Path
 
 # ---------- CONFIG ----------
-input_file = "data_to_be_fed.xlsx"       # your input Excel
-output_file = "room_allocation_results.xlsx"  # output Excel
+input_file = "data_to_be_fed.xlsx"        # input Excel file
+sorted_output_file = "room_allocation_sorted.xlsx"  # final sorted output file
 
 # ---------- STEP 1: Read Excel ----------
 df_raw = pd.read_excel(input_file, engine="openpyxl")
@@ -75,10 +75,23 @@ for _, row in df.iterrows():
         "Allocated_Room": allocated
     })
 
-# ---------- STEP 7: Save output ----------
+# ---------- STEP 7: Create DataFrame ----------
 out_df = pd.DataFrame(allocations)
-out_df.to_excel(output_file, index=False)
 
-print("✅ Allocation complete.")
-print(f"Output saved to: {output_file}")
+# ---------- STEP 8: Sort by Room Number, unallocated last ----------
+allocated_df = out_df[out_df['Allocated_Room'].notna()].copy()
+unallocated_df = out_df[out_df['Allocated_Room'].isna()].copy()
+
+# Convert room numbers to int for sorting
+allocated_df['Room_Sort'] = allocated_df['Allocated_Room'].astype(int)
+allocated_df = allocated_df.sort_values(by='Room_Sort').drop(columns=['Room_Sort'])
+
+# Combine sorted + unallocated
+sorted_df = pd.concat([allocated_df, unallocated_df], ignore_index=True)
+
+# ---------- STEP 9: Save both results ----------
+sorted_df.to_excel(sorted_output_file, index=False)
+
+print("✅ Allocation complete and sorted.")
+print(f"Final sorted results saved to: {sorted_output_file}")
 print(f"Total students: {len(out_df)}, Allocated: {out_df['Allocated_Room'].notna().sum()}, Unallocated: {out_df['Allocated_Room'].isna().sum()}")
