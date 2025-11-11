@@ -1,62 +1,32 @@
-# main.py — orchestrates the full room allocation workflow with summary report
-import sys
-import pandas as pd
-from db_fetch import fetch_room_zones
-from initial_allocation import perform_initial_allocation
-from fill_remaining import fill_remaining_rooms
+# backend/allocation/main.py
+from .db_fetch import fetch_room_zones  # optional, if you fetch from DB
+from .initial_allocation import perform_initial_allocation
+from .fill_remaining import fill_remaining_rooms
 
-def print_summary(final_output_file):
-    """Print allocation summary: per batch + totals"""
-    df = pd.read_excel(final_output_file)
+def run_pipeline(uploaded_input_path, outputs_folder):
+    """
+    Main entry to run the pipeline.
+    - uploaded_input_path: path to the uploaded excel (preferences)
+    - outputs_folder: directory to write outputs into
+    Returns: dict with paths/files produced
+    """
 
-    total = len(df)
-    allocated = df["Allocated_Room"].notna().sum()
-    unallocated = df["Allocated_Room"].isna().sum()
-
-    print("\n📊 --- ALLOCATION SUMMARY ---")
-    print(f"Total students processed: {total}")
-    print(f"Allocated: {allocated}")
-    print(f"Unallocated: {unallocated}")
-
-    # Summary by batch
-    print("\n🏫 Allocation by Batch:")
-    batch_summary = df.groupby("Batch")["Allocated_Room"].apply(lambda x: x.notna().sum())
-    print(batch_summary.to_string())
-
-    # Summary by floor (if room numbers present)
-    df_alloc = df[df["Allocated_Room"].notna()].copy()
-    df_alloc["Floor"] = df_alloc["Allocated_Room"].astype(str).str[0]  # first digit = floor
-    floor_summary = df_alloc.groupby("Floor")["Allocated_Room"].count()
-
-    print("\n🏢 Allocation by Floor:")
-    for floor, count in floor_summary.items():
-        print(f"  Floor {floor}: {count} rooms allocated")
-
-    print("\n✅ Summary report complete.\n")
-
-def main():
-    print("🏁 Starting IIT Jammu Hostel Allocation Pipeline...\n")
-
+    # 1) Ensure zones are available (db_fetch can write outputs/batch_room_zones.xlsx)
+    # If you fetch zones from DB, call fetch_room_zones() which writes to outputs folder
     try:
-        print("Step 1️⃣ : Fetching batch room zones from MySQL...")
-        fetch_room_zones()
-        print("✅ Room zones fetched successfully.\n")
+        # example: fetch_room_zones()  # optional if you want fresh DB zones
+        pass
+    except Exception:
+        # handle or log; optional
+        pass
 
-        print("Step 2️⃣ : Performing initial timestamp-based allocation...")
-        perform_initial_allocation()
-        print("✅ Initial allocation complete.\n")
+    # 2) Run initial allocation — make sure your function accepts the input file path
+    # Adapt your perform_initial_allocation to accept input_file and output folder
+    perform_initial_allocation(input_file=uploaded_input_path, outputs_folder=outputs_folder)
 
-        print("Step 3️⃣ : Filling remaining unallocated students...")
-        fill_remaining_rooms()
-        print("✅ Final batch-constrained allocation complete!\n")
+    # 3) Fill remaining rooms
+    fill_remaining_rooms(outputs_folder=outputs_folder)
 
-        final_output_file = "outputs/batch_constrained_allocation.xlsx"
-        print_summary(final_output_file)
-
-        print("🎯 All done. Check the 'outputs/' folder for generated Excel files.\n")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
+    # Expected produced file:
+    final_file = f"{outputs_folder}/batch_constrained_allocation.xlsx"
+    return {"final_file": final_file}

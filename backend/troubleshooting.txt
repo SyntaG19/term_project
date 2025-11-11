@@ -1,0 +1,1 @@
+if the interpreter does not recognises the packagese installed, even after you arein the virtual enviornment, try changing the python enviornment to the one inside /.venv/Scripts/python.exe
