@@ -1,25 +1,27 @@
-SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS room_alloc_zones;
-DROP TABLE IF EXISTS batches;
+-- Create and use database
+CREATE DATABASE IF NOT EXISTS hostel_allocation;
+USE hostel_allocation;
+-- Drop everything first (disable FK checks)
+SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS roommates;
 DROP TABLE IF EXISTS room;
 DROP TABLE IF EXISTS student;
-DROP TABLE IF EXISTS administrator;
 DROP TABLE IF EXISTS hostel;
+DROP TABLE IF EXISTS administrator;
+DROP TABLE IF EXISTS batches;
+DROP TABLE IF EXISTS room_alloc_zones;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
-CREATE DATABASE IF NOT EXISTS iitjammu_hostel;
-USE iitjammu_hostel;
 
 CREATE TABLE hostel (
     hostel_id INT AUTO_INCREMENT PRIMARY KEY,
     hostel_name VARCHAR(50) UNIQUE NOT NULL,
-    gender ENUM('Male', 'Female', 'Other'),
-    year_allocated INT NOT NULL,
+    gender ENUM('Male', 'Female', 'Other'),    
     occupancy_type ENUM('Single', 'Double') NOT NULL,
-    total_rooms INT
+    total_rooms INT,
+    phase VARCHAR(5)
 );
 
 CREATE TABLE administrator (
@@ -35,13 +37,13 @@ CREATE TABLE administrator (
 );
 
 CREATE TABLE batches (
-    batch_id VARCHAR(50) PRIMARY KEY,
-    batch_name VARCHAR(50) UNIQUE NOT NULL,
-    program ENUM('UG', 'MTech', 'PhD', 'Guest', 'Other') DEFAULT 'UG',
+    batch_id VARCHAR(50) PRIMARY KEY UNIQUE NOT NULL,
+    program ENUM('BTech', 'MTech', 'PhD', 'Guest', 'Other') DEFAULT 'BTech',
     year_of_study INT NULL,
+    status ENUM('Active', 'Graduated') DEFAULT 'Active',
     remarks VARCHAR(100)
 );
-
+-- status ko batches me rkh kr repetiiton km ho jayegi but student specific detials nhi infer ho payengi fir, toh dekhna pdega
 CREATE TABLE student (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
     roll_no VARCHAR(15) UNIQUE NOT NULL,
@@ -52,7 +54,6 @@ CREATE TABLE student (
     phone VARCHAR(15),
     email VARCHAR(100),
     rm_key INT DEFAULT 0,
-    status ENUM('Active', 'Graduated', 'Left') DEFAULT 'Active',
     hostel_id INT NOT NULL,
     batch_id VARCHAR(50),
     FOREIGN KEY (hostel_id) REFERENCES hostel(hostel_id)
@@ -64,7 +65,6 @@ CREATE TABLE student (
 CREATE TABLE room (
     room_id INT AUTO_INCREMENT PRIMARY KEY,
     hostel_id INT NOT NULL,
-    phase VARCHAR(5),
     wing_code VARCHAR(10),
     floor_no INT,
     room_no VARCHAR(10) NOT NULL,
