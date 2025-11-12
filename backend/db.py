@@ -14,3 +14,13 @@ def get_connection():
     except Error as e:
         print("❌ MySQL connection error:", e)
         return None
+
+def query(sql, params=None, fetch=False):
+    conn = get_connection()
+    cur = conn.cursor(dictionary=True)
+    cur.execute(sql, params or ())
+    data = cur.fetchall() if fetch else None
+    conn.commit()
+    cur.close()
+    conn.close()
+    return data

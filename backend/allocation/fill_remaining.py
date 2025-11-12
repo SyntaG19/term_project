@@ -1,9 +1,10 @@
 import pandas as pd
+import os
+def fill_remaining_rooms(outputs_folder):
+    allocation_file = os.path.join(outputs_folder, "room_allocation_results.xlsx")
+    zones_file = os.path.join(outputs_folder, "batch_room_zones.xlsx")
+    final_output = os.path.join(outputs_folder, "batch_constrained_allocation.xlsx")
 
-def fill_remaining_rooms():
-    allocation_file = "outputs/room_allocation_results.xlsx"
-    zones_file = "outputs/batch_room_zones.xlsx"
-    final_output = "outputs/batch_constrained_allocation.xlsx"
 
     alloc_df = pd.read_excel(allocation_file)
     zones_df = pd.read_excel(zones_file)

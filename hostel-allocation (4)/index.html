@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IIT Jammu - Hostel Allocation System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Landing Page -->
+    <div id="landingPage" class="page active">
+        <div class="landing-container">
+            <div class="landing-header">
+                <h1>IIT Jammu</h1>
+                <h2>Hostel Allocation System</h2>
+                <p>Efficient hostel management for students and administrators</p>
+            </div>
+            <div class="login-options">
+                <div class="login-card" onclick="showLogin('admin')">
+                    <div class="icon">👨‍💼</div>
+                    <h3>Admin Login</h3>
+                    <p>Manage hostels, students, and allocations</p>
+                </div>
+                <div class="login-card" onclick="showLogin('student')">
+                    <div class="icon">🎓</div>
+                    <h3>Student Login</h3>
+                    <p>View your room allocation details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login -->
+    <div id="adminLoginPage" class="page">
+        <div class="login-container">
+            <button class="back-btn" onclick="showLanding()">← Back</button>
+            <div class="login-box">
+                <h2>Admin Login</h2>
+                <form onsubmit="adminLogin(event)">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="adminEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="adminPassword" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                </form>
+                <div id="adminLoginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Login -->
+    <div id="studentLoginPage" class="page">
+        <div class="login-container">
+            <button class="back-btn" onclick="showLanding()">← Back</button>
+            <div class="login-box">
+                <h2>Student Login</h2>
+                <form onsubmit="studentLogin(event)">
+                    <div class="form-group">
+                        <label>Roll Number</label>
+                        <input type="text" id="studentRollNo" class="form-control" placeholder="IIT2023001" required>
+                    </div>
+                    <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                </form>
+                <div id="studentLoginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">IIT Jammu - Admin Panel</div>
+            <div class="nav-user">
+                <span id="adminName"></span>
+                <button class="btn btn--sm" onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        <div class="dashboard-container">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="hostels">Hostels</button>
+                <button class="tab-btn" data-tab="students">Students</button>
+                <button class="tab-btn" data-tab="rooms">Rooms</button>
+                <button class="tab-btn" data-tab="batches">Batches</button>
+                <button class="tab-btn" data-tab="zones">Room Zones</button>
+                <button class="tab-btn" data-tab="allocation">Room Allocation</button>
+            </div>
+
+            <!-- Tab 1: Hostels -->
+            <div id="hostels" class="tab-content active">
+                <div class="tab-header">
+                    <h3>Hostel Management</h3>
+                    <button class="btn btn--primary" onclick="openHostelModal()">+ Add Hostel</button>
+                </div>
+                <div id="hostelsTable"></div>
+            </div>
+
+            <!-- Tab 2: Students -->
+            <div id="students" class="tab-content">
+                <div class="tab-header">
+                    <h3>Student Management</h3>
+                    <button class="btn btn--primary" onclick="openStudentModal()">+ Add Student</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="studentSearch" class="form-control" placeholder="Search by roll number, name, or department..." oninput="filterStudents()">
+                </div>
+                <div id="studentsTable"></div>
+            </div>
+
+            <!-- Tab 3: Rooms -->
+            <div id="rooms" class="tab-content">
+                <div class="tab-header">
+                    <h3>Room Management</h3>
+                    <div>
+                        <select id="hostelSelect" class="form-control" onchange="loadRooms()" style="display: inline-block; width: 200px; margin-right: 10px;">
+                            <option value="">Select Hostel</option>
+                        </select>
+                        <button class="btn btn--primary" onclick="openRoomModal()">+ Add Room</button>
+                    </div>
+                </div>
+                <div id="roomsContainer"></div>
+            </div>
+
+            <!-- Tab 4: Batches -->
+            <div id="batches" class="tab-content">
+                <div class="tab-header">
+                    <h3>Batch Management</h3>
+                    <button class="btn btn--primary" onclick="openBatchModal()">+ Add Batch</button>
+                </div>
+                <div id="batchesTable"></div>
+            </div>
+
+            <!-- Tab 5: Zones -->
+            <div id="zones" class="tab-content">
+                <div class="tab-header">
+                    <h3>Room Allocation Zones</h3>
+                    <button class="btn btn--primary" onclick="openZoneModal()">+ Add Zone</button>
+                </div>
+                <div id="zonesTable"></div>
+            </div>
+
+            <!-- Tab 6: Allocation -->
+            <div id="allocation" class="tab-content">
+                <div class="tab-header">
+                    <h3>Room Allocation Algorithm</h3>
+                </div>
+                <div class="allocation-container">
+                    <div class="card">
+                        <div class="card__body">
+                           <h4>Upload Student Preference Excel File</h4>
+<p>Upload an Excel file (XLSX) containing student preference data with timestamps.</p>
+<input type="file" id="preferenceFile" class="form-control" accept=".xlsx,.xls" />
+<button class="btn btn--primary" onclick="uploadAndRunAllocation()" style="margin-top: 10px;">Upload & Run Allocation</button>
+
+                            <button class="btn btn--secondary" onclick="downloadAllocation()" style="margin-top: 10px; margin-left: 10px;">Download Results</button>
+                        </div>
+                    </div>
+                    <div id="allocationResults" class="card" style="margin-top: 20px; display: none;">
+                        <div class="card__body">
+                            <h4>Allocation Results</h4>
+                            <div id="allocationStats"></div>
+                            <div id="allocationTable"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Dashboard -->
+    <div id="studentDashboard" class="page">
+        <nav class="navbar">
+            <div class="nav-brand">IIT Jammu - Student Portal</div>
+            <div class="nav-user">
+                <span id="studentName"></span>
+                <button class="btn btn--sm" onclick="logout()">Logout</button>
+            </div>
+        </nav>
+        <div class="dashboard-container">
+            <div class="student-info-container">
+                <div class="card">
+                    <div class="card__body">
+                        <h3>Your Room Allocation</h3>
+                        <div id="studentRoomInfo"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card__body">
+                        <h3>Hostel Information</h3>
+                        <div id="studentHostelInfo"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card__body">
+                        <h3>Hostel Facilities</h3>
+                        <ul>
+                            <li>24/7 Security</li>
+                            <li>Common Room with TV</li>
+                            <li>Reading Room</li>
+                            <li>Gym Facilities</li>
+                            <li>Mess &amp; Dining Hall</li>
+                            <li>Wi-Fi Connectivity</li>
+                            <li>Laundry Services</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modalOverlay" class="modal-overlay" onclick="closeModal()"></div>
+    
+    <!-- Hostel Modal -->
+    <div id="hostelModal" class="modal">
+        <div class="modal-header">
+            <h3 id="hostelModalTitle">Add Hostel</h3>
+            <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="hostelForm" onsubmit="saveHostel(event)">
+                <input type="hidden" id="hostel_id">
+                <div class="form-group">
+                    <label>Hostel Name</label>
+                    <input type="text" id="hostel_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="hostel_gender" class="form-control" required>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Occupancy Type</label>
+                    <select id="hostel_occupancy" class="form-control" required>
+                        <option value="Single">Single</option>
+                        <option value="Double">Double</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Total Rooms</label>
+                    <input type="number" id="hostel_rooms" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Phase</label>
+                    <input type="text" id="hostel_phase" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn--primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Student Modal -->
+    <div id="studentModal" class="modal">
+        <div class="modal-header">
+            <h3 id="studentModalTitle">Add Student</h3>
+            <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="studentForm" onsubmit="saveStudent(event)">
+                <input type="hidden" id="student_id">
+                <div class="form-group">
+                    <label>Roll Number</label>
+                    <input type="text" id="student_rollno" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="student_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Year</label>
+                    <input type="number" id="student_year" class="form-control" min="1" max="5" required>
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="student_gender" class="form-control" required>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" id="student_dept" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="student_email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Batch</label>
+                    <select id="student_batch" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Hostel (Optional)</label>
+                    <select id="student_hostel" class="form-control">
+                        <option value="">Not Assigned</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn--primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Room Modal -->
+    <div id="roomModal" class="modal">
+        <div class="modal-header">
+            <h3 id="roomModalTitle">Add Room</h3>
+            <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="roomForm" onsubmit="saveRoom(event)">
+                <input type="hidden" id="room_id">
+                <div class="form-group">
+                    <label>Hostel</label>
+                    <select id="room_hostel" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Wing Code</label>
+                    <select id="room_wing" class="form-control" required>
+                        <option value="W1">W1</option>
+                        <option value="W2">W2</option>
+                        <option value="W3">W3</option>
+                        <option value="W4">W4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Floor Number</label>
+                    <select id="room_floor" class="form-control" required>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Room Number</label>
+                    <input type="text" id="room_number" class="form-control" placeholder="e.g., 2001" required>
+                </div>
+                <div class="form-group">
+                    <label>Bed ID</label>
+                    <select id="room_bed" class="form-control" required>
+                        <option value="A1">A1</option>
+                        <option value="B1">B1</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn--primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Batch Modal -->
+    <div id="batchModal" class="modal">
+        <div class="modal-header">
+            <h3 id="batchModalTitle">Add Batch</h3>
+            <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="batchForm" onsubmit="saveBatch(event)">
+                <div class="form-group">
+                    <label>Batch ID</label>
+                    <input type="text" id="batch_id" class="form-control" placeholder="e.g., UG2025" required>
+                </div>
+                <div class="form-group">
+                    <label>Program</label>
+                    <select id="batch_program" class="form-control" required>
+                        <option value="BTech">BTech</option>
+                        <option value="MTech">MTech</option>
+                        <option value="PhD">PhD</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Year of Study</label>
+                    <input type="number" id="batch_year" class="form-control" min="1" max="5" required>
+                </div>
+                <button type="submit" class="btn btn--primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Zone Modal -->
+    <div id="zoneModal" class="modal">
+        <div class="modal-header">
+            <h3>Add Room Allocation Zone</h3>
+            <button class="close-btn" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="zoneForm" onsubmit="saveZone(event)">
+                <div class="form-group">
+                    <label>Batch</label>
+                    <select id="zone_batch" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Hostel</label>
+                    <select id="zone_hostel" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Start Room Number</label>
+                    <input type="text" id="zone_start" class="form-control" placeholder="e.g., 2001" required>
+                </div>
+                <div class="form-group">
+                    <label>End Room Number</label>
+                    <input type="text" id="zone_end" class="form-control" placeholder="e.g., 2023" required>
+                </div>
+                <div class="form-group">
+                    <label>Remarks (Optional)</label>
+                    <input type="text" id="zone_remarks" class="form-control">
+                </div>
+                <button type="submit" class="btn btn--primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

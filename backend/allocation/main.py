@@ -5,28 +5,20 @@ from .fill_remaining import fill_remaining_rooms
 
 def run_pipeline(uploaded_input_path, outputs_folder):
     """
-    Main entry to run the pipeline.
-    - uploaded_input_path: path to the uploaded excel (preferences)
-    - outputs_folder: directory to write outputs into
-    Returns: dict with paths/files produced
+    Main entry to run the full pipeline dynamically.
+    uploaded_input_path: path to the uploaded Excel file
+    outputs_folder: where to save results
     """
+    os.makedirs(outputs_folder, exist_ok=True)
 
-    # 1) Ensure zones are available (db_fetch can write outputs/batch_room_zones.xlsx)
-    # If you fetch zones from DB, call fetch_room_zones() which writes to outputs folder
-    try:
-        # example: fetch_room_zones()  # optional if you want fresh DB zones
-        pass
-    except Exception:
-        # handle or log; optional
-        pass
+    # 1️⃣ Fetch latest room zones (optional)
+    # fetch_room_zones()  # only if needed
 
-    # 2) Run initial allocation — make sure your function accepts the input file path
-    # Adapt your perform_initial_allocation to accept input_file and output folder
+    # 2️⃣ Run initial allocation
     perform_initial_allocation(input_file=uploaded_input_path, outputs_folder=outputs_folder)
 
-    # 3) Fill remaining rooms
+    # 3️⃣ Fill remaining unallocated rooms
     fill_remaining_rooms(outputs_folder=outputs_folder)
 
-    # Expected produced file:
-    final_file = f"{outputs_folder}/batch_constrained_allocation.xlsx"
+    final_file = os.path.join(outputs_folder, "batch_constrained_allocation.xlsx")
     return {"final_file": final_file}

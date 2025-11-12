@@ -8,3 +8,5 @@ DB_CONFIG = {
 # Paths used by backend
 UPLOAD_FOLDER = "uploads"
 OUTPUT_FOLDER = "outputs"
+
+print(f"Using database config: {DB_CONFIG['database']} on {DB_CONFIG['host']}")

@@ -1,9 +1,7 @@
 import pandas as pd
+import os
+def perform_initial_allocation(input_file, outputs_folder):
 
-def perform_initial_allocation():
-    input_file = "data_to_be_fed.xlsx"
-    zones_file = "outputs/batch_room_zones.xlsx"
-    output_file = "outputs/room_allocation_results.xlsx"
 
     batch_room_zones = pd.read_excel(zones_file)
 
@@ -17,6 +15,9 @@ def perform_initial_allocation():
         row["Batch"]: generate_room_range(row["start_room_no"], row["end_room_no"])
         for _, row in batch_room_zones.iterrows()
     }
+    # Generate paths dynamically instead of hardcoding
+    output_file = os.path.join(outputs_folder, "room_allocation_results.xlsx")
+    batch_zones_file = os.path.join(outputs_folder, "batch_room_zones.xlsx")
 
     df_raw = pd.read_excel(input_file, engine="openpyxl")
     df_raw.columns = [str(c).strip() for c in df_raw.columns]
