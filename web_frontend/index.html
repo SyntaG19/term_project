@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Allocation System - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Allocation System</h1>
+            <nav>
+                <a href="index.html" class="active">Dashboard</a>
+                <a href="hostels.html">Hostels</a>
+                <a href="students.html">Students</a>
+                <a href="rooms.html">Rooms</a>
+                <a href="batches.html">Batches</a>
+                <a href="administrators.html">Administrators</a>
+                <a href="roommates.html">Roommates</a>
+                <a href="room-alloc-zones.html">Room Allocation Zones</a>
+                <a href="allocation.html">Room Allocation</a>
+            </nav>
+        </header>
+
+        <main>
+            <section class="dashboard">
+                <h2>Dashboard Overview</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <h3>Total Hostels</h3>
+                        <p class="stat-number" id="totalHostels">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Students</h3>
+                        <p class="stat-number" id="totalStudents">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Rooms</h3>
+                        <p class="stat-number" id="totalRooms">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Occupied Rooms</h3>
+                        <p class="stat-number" id="occupiedRooms">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Available Rooms</h3>
+                        <p class="stat-number" id="availableRooms">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Batches</h3>
+                        <p class="stat-number" id="totalBatches">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Administrators</h3>
+                        <p class="stat-number" id="totalAdministrators">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Roommate Pairs</h3>
+                        <p class="stat-number" id="totalRoommatePairs">-</p>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <h3>Quick Actions</h3>
+                    <div class="action-buttons">
+                        <a href="hostels.html" class="action-btn">Manage Hostels</a>
+                        <a href="students.html" class="action-btn">Manage Students</a>
+                        <a href="rooms.html" class="action-btn">Manage Rooms</a>
+                        <a href="batches.html" class="action-btn">Manage Batches</a>
+                        <a href="administrators.html" class="action-btn">Manage Administrators</a>
+                        <a href="roommates.html" class="action-btn">Manage Roommates</a>
+                        <a href="room-alloc-zones.html" class="action-btn">Manage Room Allocation Zones</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Load dashboard stats
+        async function loadDashboardStats() {
+            try {
+                const response = await fetch('http://localhost:5000/api/dashboard/stats');
+                const stats = await response.json();
+                
+                document.getElementById('totalHostels').textContent = stats.total_hostels || 0;
+                document.getElementById('totalStudents').textContent = stats.total_students || 0;
+                document.getElementById('totalRooms').textContent = stats.total_rooms || 0;
+                document.getElementById('occupiedRooms').textContent = stats.occupied_rooms || 0;
+                document.getElementById('availableRooms').textContent = stats.available_rooms || 0;
+                document.getElementById('totalBatches').textContent = stats.total_batches || 0;
+                document.getElementById('totalAdministrators').textContent = stats.total_administrators || 0;
+                document.getElementById('totalRoommatePairs').textContent = stats.total_roommate_pairs || 0;
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+                alert('Failed to load dashboard statistics. Make sure the backend server is running.');
+            }
+        }
+
+        // Load stats on page load
+        loadDashboardStats();
+    </script>
+</body>
+</html>

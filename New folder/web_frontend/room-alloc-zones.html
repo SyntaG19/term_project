@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Allocation Zones Management - Hostel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Management System</h1>
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="hostels.html">Hostels</a>
+                <a href="students.html">Students</a>
+                <a href="rooms.html">Rooms</a>
+                <a href="batches.html">Batches</a>
+                <a href="administrators.html">Administrators</a>
+                <a href="roommates.html">Roommates</a>
+                <a href="room-alloc-zones.html" class="active">Room Allocation Zones</a>
+                <a href="allocation.html">Room Allocation</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Room Allocation Zones Management</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Zone</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Zone ID</th>
+                            <th>Hostel</th>
+                            <th>Batch</th>
+                            <th>Start Room No</th>
+                            <th>End Room No</th>
+                            <th>Remarks</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="zonesTable">
+                        <tr>
+                            <td colspan="7" class="loading">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="zoneModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Room Allocation Zone</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="zoneForm">
+                <input type="hidden" id="zone_id" name="zone_id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hostel_id">Hostel *</label>
+                        <select id="hostel_id" name="hostel_id" required>
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch_id">Batch *</label>
+                        <select id="batch_id" name="batch_id" required>
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start_room_no">Start Room No *</label>
+                        <input type="text" id="start_room_no" name="start_room_no" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end_room_no">End Room No *</label>
+                        <input type="text" id="end_room_no" name="end_room_no" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="remarks">Remarks</label>
+                    <textarea id="remarks" name="remarks" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let editingZoneId = null;
+        let hostels = [];
+        let batches = [];
+
+        // Load zones
+        async function loadZones() {
+            try {
+                const zones = await apiCall('/room-alloc-zones');
+                displayZones(zones);
+            } catch (error) {
+                showAlert('Failed to load zones: ' + error.message, 'error');
+                showEmptyState(document.getElementById('zonesTable'), 'Failed to load zones');
+            }
+        }
+
+        // Load hostels and batches for dropdowns
+        async function loadDropdowns() {
+            try {
+                hostels = await apiCall('/hostels');
+                batches = await apiCall('/batches');
+                
+                populateSelect('hostel_id', hostels.map(h => ({ value: h.hostel_id, text: h.hostel_name })));
+                populateSelect('batch_id', batches.map(b => ({ value: b.batch_id, text: b.batch_id })));
+            } catch (error) {
+                console.error('Failed to load dropdowns:', error);
+            }
+        }
+
+        // Display zones in table
+        function displayZones(zones) {
+            const tbody = document.getElementById('zonesTable');
+            
+            if (zones.length === 0) {
+                showEmptyState(tbody, 'No zones found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+            zones.forEach(zone => {
+                const row = createTableRow(zone, [
+                    'zone_id',
+                    'hostel_name',
+                    'batch_name',
+                    'start_room_no',
+                    'end_room_no',
+                    'remarks'
+                ], {
+                    edit: (data) => editZone(data),
+                    delete: (data) => deleteZone(data.zone_id, `Zone ${data.zone_id}`)
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingZoneId = null;
+            document.getElementById('modalTitle').textContent = 'Add Room Allocation Zone';
+            document.getElementById('zoneForm').reset();
+            document.getElementById('zoneModal').classList.add('active');
+            loadDropdowns();
+        }
+
+        // Edit zone
+        function editZone(zone) {
+            editingZoneId = zone.zone_id;
+            document.getElementById('modalTitle').textContent = 'Edit Room Allocation Zone';
+            loadDropdowns().then(() => {
+                setFormData('zoneForm', {
+                    zone_id: zone.zone_id,
+                    hostel_id: zone.hostel_id,
+                    batch_id: zone.batch_id,
+                    start_room_no: zone.start_room_no,
+                    end_room_no: zone.end_room_no,
+                    remarks: zone.remarks || ''
+                });
+            });
+            document.getElementById('zoneModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('zoneModal').classList.remove('active');
+            document.getElementById('zoneForm').reset();
+            editingZoneId = null;
+        }
+
+        // Delete zone
+        async function deleteZone(zoneId, zoneName) {
+            confirmDelete(`Are you sure you want to delete ${zoneName}?`, async () => {
+                try {
+                    await apiCall(`/room-alloc-zones/${zoneId}`, 'DELETE');
+                    showAlert('Zone deleted successfully', 'success');
+                    loadZones();
+                } catch (error) {
+                    showAlert('Failed to delete zone: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('zoneForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = getFormData('zoneForm');
+            delete formData.zone_id;
+            
+            // Convert string values to appropriate types
+            if (formData.hostel_id) formData.hostel_id = parseInt(formData.hostel_id);
+            if (!formData.remarks) formData.remarks = null;
+            
+            try {
+                if (editingZoneId) {
+                    await apiCall(`/room-alloc-zones/${editingZoneId}`, 'PUT', formData);
+                    showAlert('Zone updated successfully', 'success');
+                } else {
+                    await apiCall('/room-alloc-zones', 'POST', formData);
+                    showAlert('Zone added successfully', 'success');
+                }
+                closeModal();
+                loadZones();
+            } catch (error) {
+                showAlert('Failed to save zone: ' + error.message, 'error');
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('zoneModal').addEventListener('click', (e) => {
+            if (e.target.id === 'zoneModal') {
+                closeModal();
+            }
+        });
+
+        // Load zones on page load
+        loadZones();
+    </script>
+</body>
+</html>
+
+

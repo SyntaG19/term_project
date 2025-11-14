@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Allocation Management System</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> Hostel Management</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="#" class="nav-item" data-page="hostels">
+                    <i class="fas fa-building"></i> Hostels
+                </a>
+                <a href="#" class="nav-item" data-page="students">
+                    <i class="fas fa-user-graduate"></i> Students
+                </a>
+                <a href="#" class="nav-item" data-page="rooms">
+                    <i class="fas fa-door-open"></i> Rooms
+                </a>
+                <a href="#" class="nav-item" data-page="batches">
+                    <i class="fas fa-users"></i> Batches
+                </a>
+                <a href="#" class="nav-item" data-page="administrators">
+                    <i class="fas fa-user-tie"></i> Administrators
+                </a>
+                <a href="#" class="nav-item" data-page="roommates">
+                    <i class="fas fa-user-friends"></i> Roommates
+                </a>
+                <a href="#" class="nav-item" data-page="zones">
+                    <i class="fas fa-map-marked-alt"></i> Allocation Zones
+                </a>
+                <a href="#" class="nav-item" data-page="allocation">
+                    <i class="fas fa-file-excel"></i> Room Allocation
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1 id="page-title">Dashboard</h1>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="refresh-btn">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="page-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-hostels">0</h3>
+                            <p>Total Hostels</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-students">0</h3>
+                            <p>Total Students</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange">
+                            <i class="fas fa-door-open"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-rooms">0</h3>
+                            <p>Total Rooms</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="occupied-rooms">0</h3>
+                            <p>Occupied Rooms</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon teal">
+                            <i class="fas fa-door-closed"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="available-rooms">0</h3>
+                            <p>Available Rooms</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-batches">0</h3>
+                            <p>Total Batches</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hostels Page -->
+            <div id="hostels-page" class="page-content">
+                <div class="page-header">
+                    <button class="btn btn-primary" id="add-hostel-btn">
+                        <i class="fas fa-plus"></i> Add Hostel
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="hostels-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Hostel Name</th>
+                                <th>Gender</th>
+                                <th>Occupancy Type</th>
+                                <th>Total Rooms</th>
+                                <th>Phase</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hostels-tbody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Students Page -->
+            <div id="students-page" class="page-content">
+                <div class="page-header">
+                    <button class="btn btn-primary" id="add-student-btn">
+                        <i class="fas fa-plus"></i> Add Student
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="students-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Roll No</th>
+                                <th>Name</th>
+                                <th>Year</th>
+                                <th>Gender</th>
+                                <th>Department</th>
+                                <th>Hostel</th>
+                                <th>Batch</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-tbody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Rooms Page -->
+            <div id="rooms-page" class="page-content">
+                <div class="page-header">
+                    <button class="btn btn-primary" id="add-room-btn">
+                        <i class="fas fa-plus"></i> Add Room
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="rooms-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Hostel</th>
+                                <th>Wing</th>
+                                <th>Floor</th>
+                                <th>Room No</th>
+                                <th>Bed ID</th>
+                                <th>Allotted To</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rooms-tbody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Batches Page -->
+            <div id="batches-page" class="page-content">
+                <div class="page-header">
+                    <button class="btn btn-primary" id="add-batch-btn">
+                        <i class="fas fa-plus"></i> Add Batch
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="batches-table">
+                        <thead>
+                            <tr>
+                                <th>Batch ID</th>
+                                <th>Program</th>
+                                <th>Year of Study</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batches-tbody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Administrators Page -->
+            <div id="administrators-page" class="page-content">
+                <div class="page-header">
+                    <button class="btn btn-primary" id="add-administrator-btn">
+                        <i class="fas fa-plus"></i> Add Administrator
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="administrators-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Designation</th>
+                                <th>Contact</th>
+                                <th>Email</th>
+                                <th>Hostel</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="administrators-tbody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Roommates Page -->
+            <div id="roommates-page" class="page-content">
+                <div class="page-header">
+                    <button class="btn btn-primary" id="add-roommate-btn">
+                        <i class="fas fa-plus"></i> Add Roommate Pair
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="roommates-table">
+                        <thead>
+                            <tr>
+                                <th>RM Key</th>
+                                <th>Student 1</th>
+                                <th>Student 2</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roommates-tbody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Allocation Zones Page -->
+            <div id="zones-page" class="page-content">
+                <div class="page-header">
+                    <button class="btn btn-primary" id="add-zone-btn">
+                        <i class="fas fa-plus"></i> Add Zone
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="zones-table">
+                        <thead>
+                            <tr>
+                                <th>Zone ID</th>
+                                <th>Hostel</th>
+                                <th>Batch</th>
+                                <th>Start Room</th>
+                                <th>End Room</th>
+                                <th>Remarks</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="zones-tbody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Room Allocation Page -->
+            <div id="allocation-page" class="page-content">
+                <div class="allocation-container">
+                    <div class="allocation-card">
+                        <h2><i class="fas fa-file-excel"></i> Room Allocation</h2>
+                        <p class="description">Upload an Excel file with student preferences to allocate rooms automatically.</p>
+                        
+                        <div class="upload-section">
+                            <div class="upload-area" id="upload-area">
+                                <input type="file" id="file-input" accept=".xlsx,.xls" style="display: none;">
+                                <div class="upload-content">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>Click to upload or drag and drop</p>
+                                    <p class="upload-hint">Excel files only (.xlsx, .xls)</p>
+                                </div>
+                            </div>
+                            <div id="file-info" class="file-info" style="display: none;">
+                                <div class="file-details">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span id="file-name"></span>
+                                    <button class="btn btn-sm btn-danger" id="remove-file-btn">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="allocation-actions">
+                            <button class="btn btn-primary" id="run-allocation-btn" disabled>
+                                <i class="fas fa-play"></i> Run Allocation
+                            </button>
+                            <button class="btn btn-secondary" id="refresh-allocation-btn">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+
+                        <div id="allocation-progress" class="allocation-progress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <p id="progress-text">Processing allocation...</p>
+                        </div>
+
+                        <div id="allocation-results" class="allocation-results" style="display: none;">
+                            <h3>Allocation Results</h3>
+                            <div class="results-stats">
+                                <div class="result-stat">
+                                    <span class="stat-label">Total Students:</span>
+                                    <span class="stat-value" id="total-students-count">0</span>
+                                </div>
+                                <div class="result-stat">
+                                    <span class="stat-label">Allocated:</span>
+                                    <span class="stat-value success" id="allocated-count">0</span>
+                                </div>
+                                <div class="result-stat">
+                                    <span class="stat-label">Unallocated:</span>
+                                    <span class="stat-value danger" id="unallocated-count">0</span>
+                                </div>
+                            </div>
+                            <div class="results-actions">
+                                <button class="btn btn-success" id="download-result-btn">
+                                    <i class="fas fa-download"></i> Download Results
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="previous-allocations">
+                            <h3>Previous Allocations</h3>
+                            <div class="table-container">
+                                <table class="data-table" id="allocation-files-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Filename</th>
+                                            <th>Size</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="allocation-files-tbody">
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Modal Title</h2>
+                <button class="modal-close" id="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="loading-spinner">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="static/js/api.js"></script>
+    <script src="static/js/modal.js"></script>
+    <script src="static/js/utils.js"></script>
+    <script src="static/js/app.js"></script>
+    <script src="static/js/dashboard.js"></script>
+    <script src="static/js/hostels.js"></script>
+    <script src="static/js/students.js"></script>
+    <script src="static/js/rooms.js"></script>
+    <script src="static/js/batches.js"></script>
+    <script src="static/js/administrators.js"></script>
+    <script src="static/js/roommates.js"></script>
+    <script src="static/js/zones.js"></script>
+    <script src="static/js/allocation.js"></script>
+</body>
+</html>

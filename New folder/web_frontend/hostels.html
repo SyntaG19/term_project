@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostels Management - Hostel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Management System</h1>
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="hostels.html" class="active">Hostels</a>
+                <a href="students.html">Students</a>
+                <a href="rooms.html">Rooms</a>
+                <a href="batches.html">Batches</a>
+                <a href="administrators.html">Administrators</a>
+                <a href="roommates.html">Roommates</a>
+                <a href="room-alloc-zones.html">Room Allocation Zones</a>
+                <a href="allocation.html">Room Allocation</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Hostels Management</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Hostel</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hostel Name</th>
+                            <th>Gender</th>
+                            <th>Occupancy Type</th>
+                            <th>Total Rooms</th>
+                            <th>Phase</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hostelsTable">
+                        <tr>
+                            <td colspan="7" class="loading">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="hostelModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Hostel</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="hostelForm">
+                <input type="hidden" id="hostel_id" name="hostel_id">
+                <div class="form-group">
+                    <label for="hostel_name">Hostel Name *</label>
+                    <input type="text" id="hostel_name" name="hostel_name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="gender">Gender *</label>
+                        <select id="gender" name="gender" required>
+                            <option value="">Select...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="occupancy_type">Occupancy Type *</label>
+                        <select id="occupancy_type" name="occupancy_type" required>
+                            <option value="">Select...</option>
+                            <option value="Single">Single</option>
+                            <option value="Double">Double</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="total_rooms">Total Rooms</label>
+                        <input type="number" id="total_rooms" name="total_rooms" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="phase">Phase</label>
+                        <input type="text" id="phase" name="phase">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let editingHostelId = null;
+
+        // Load hostels
+        async function loadHostels() {
+            try {
+                const hostels = await apiCall('/hostels');
+                displayHostels(hostels);
+            } catch (error) {
+                showAlert('Failed to load hostels: ' + error.message, 'error');
+                showEmptyState(document.getElementById('hostelsTable'), 'Failed to load hostels');
+            }
+        }
+
+        // Display hostels in table
+        function displayHostels(hostels) {
+            const tbody = document.getElementById('hostelsTable');
+            
+            if (hostels.length === 0) {
+                showEmptyState(tbody, 'No hostels found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+            hostels.forEach(hostel => {
+                const row = createTableRow(hostel, [
+                    'hostel_id',
+                    'hostel_name',
+                    'gender',
+                    'occupancy_type',
+                    'total_rooms',
+                    'phase'
+                ], {
+                    edit: (data) => editHostel(data),
+                    delete: (data) => deleteHostel(data.hostel_id, data.hostel_name)
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingHostelId = null;
+            document.getElementById('modalTitle').textContent = 'Add Hostel';
+            document.getElementById('hostelForm').reset();
+            document.getElementById('hostelModal').classList.add('active');
+        }
+
+        // Edit hostel
+        function editHostel(hostel) {
+            editingHostelId = hostel.hostel_id;
+            document.getElementById('modalTitle').textContent = 'Edit Hostel';
+            setFormData('hostelForm', {
+                hostel_id: hostel.hostel_id,
+                hostel_name: hostel.hostel_name,
+                gender: hostel.gender,
+                occupancy_type: hostel.occupancy_type,
+                total_rooms: hostel.total_rooms,
+                phase: hostel.phase
+            });
+            document.getElementById('hostelModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('hostelModal').classList.remove('active');
+            document.getElementById('hostelForm').reset();
+            editingHostelId = null;
+        }
+
+        // Delete hostel
+        async function deleteHostel(hostelId, hostelName) {
+            confirmDelete(`Are you sure you want to delete hostel "${hostelName}"?`, async () => {
+                try {
+                    await apiCall(`/hostels/${hostelId}`, 'DELETE');
+                    showAlert('Hostel deleted successfully', 'success');
+                    loadHostels();
+                } catch (error) {
+                    showAlert('Failed to delete hostel: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('hostelForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = getFormData('hostelForm');
+            delete formData.hostel_id; // Remove hidden field from data
+            
+            try {
+                if (editingHostelId) {
+                    await apiCall(`/hostels/${editingHostelId}`, 'PUT', formData);
+                    showAlert('Hostel updated successfully', 'success');
+                } else {
+                    await apiCall('/hostels', 'POST', formData);
+                    showAlert('Hostel added successfully', 'success');
+                }
+                closeModal();
+                loadHostels();
+            } catch (error) {
+                showAlert('Failed to save hostel: ' + error.message, 'error');
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('hostelModal').addEventListener('click', (e) => {
+            if (e.target.id === 'hostelModal') {
+                closeModal();
+            }
+        });
+
+        // Load hostels on page load
+        loadHostels();
+    </script>
+</body>
+</html>

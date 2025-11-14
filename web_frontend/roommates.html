@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roommates Management - Hostel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Allocation System</h1>
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="hostels.html">Hostels</a>
+                <a href="students.html">Students</a>
+                <a href="rooms.html">Rooms</a>
+                <a href="batches.html">Batches</a>
+                <a href="administrators.html">Administrators</a>
+                <a href="roommates.html" class="active">Roommates</a>
+                <a href="room-alloc-zones.html">Room Allocation Zones</a>
+                <a href="allocation.html">Room Allocation</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Roommates Management</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Roommate Pair</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Roommate Key</th>
+                            <th>Student 1</th>
+                            <th>Student 2</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roommatesTable">
+                        <tr>
+                            <td colspan="4" class="loading">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="roommateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Roommate Pair</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="roommateForm">
+                <div class="form-group">
+                    <label for="rm_key">Roommate Key *</label>
+                    <input type="number" id="rm_key" name="rm_key" min="1" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="student1_id">Student 1 ID *</label>
+                        <select id="student1_id" name="student1_id" required>
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="student2_id">Student 2 ID</label>
+                        <select id="student2_id" name="student2_id">
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let editingRmKey = null;
+        let students = [];
+
+        // Load roommates
+        async function loadRoommates() {
+            try {
+                const roommates = await apiCall('/roommates');
+                displayRoommates(roommates);
+            } catch (error) {
+                showAlert('Failed to load roommates: ' + error.message, 'error');
+                showEmptyState(document.getElementById('roommatesTable'), 'Failed to load roommates');
+            }
+        }
+
+        // Load students for dropdown
+        async function loadDropdowns() {
+            try {
+                students = await apiCall('/students');
+                const studentOptions = students.map(s => ({ 
+                    value: s.student_id, 
+                    text: `${s.name} (${s.roll_no})` 
+                }));
+                populateSelect('student1_id', studentOptions);
+                populateSelect('student2_id', studentOptions);
+            } catch (error) {
+                console.error('Failed to load dropdowns:', error);
+            }
+        }
+
+        // Display roommates in table
+        function displayRoommates(roommates) {
+            const tbody = document.getElementById('roommatesTable');
+            
+            if (roommates.length === 0) {
+                showEmptyState(tbody, 'No roommate pairs found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+            roommates.forEach(rm => {
+                const row = createTableRow(rm, [
+                    'rm_key',
+                    { key: 'student1_name', formatter: (val) => val ? `${val} (${rm.student1_roll})` : `ID: ${rm.student1_id}` },
+                    { key: 'student2_name', formatter: (val) => val ? `${val} (${rm.student2_roll})` : (rm.student2_id ? `ID: ${rm.student2_id}` : '-') }
+                ], {
+                    edit: (data) => editRoommate(data),
+                    delete: (data) => deleteRoommate(data.rm_key, `Pair ${data.rm_key}`)
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingRmKey = null;
+            document.getElementById('modalTitle').textContent = 'Add Roommate Pair';
+            document.getElementById('roommateForm').reset();
+            document.getElementById('rm_key').disabled = false;
+            document.getElementById('roommateModal').classList.add('active');
+            loadDropdowns();
+        }
+
+        // Edit roommate
+        function editRoommate(rm) {
+            editingRmKey = rm.rm_key;
+            document.getElementById('modalTitle').textContent = 'Edit Roommate Pair';
+            document.getElementById('rm_key').disabled = true;
+            loadDropdowns().then(() => {
+                setFormData('roommateForm', {
+                    rm_key: rm.rm_key,
+                    student1_id: rm.student1_id,
+                    student2_id: rm.student2_id || ''
+                });
+            });
+            document.getElementById('roommateModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('roommateModal').classList.remove('active');
+            document.getElementById('roommateForm').reset();
+            editingRmKey = null;
+        }
+
+        // Delete roommate
+        async function deleteRoommate(rmKey, rmName) {
+            confirmDelete(`Are you sure you want to delete ${rmName}?`, async () => {
+                try {
+                    await apiCall(`/roommates/${rmKey}`, 'DELETE');
+                    showAlert('Roommate pair deleted successfully', 'success');
+                    loadRoommates();
+                } catch (error) {
+                    showAlert('Failed to delete roommate pair: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('roommateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = getFormData('roommateForm');
+            
+            // Convert string values to appropriate types
+            if (formData.rm_key) formData.rm_key = parseInt(formData.rm_key);
+            if (formData.student1_id) formData.student1_id = parseInt(formData.student1_id);
+            if (formData.student2_id) formData.student2_id = parseInt(formData.student2_id);
+            if (!formData.student2_id) formData.student2_id = null;
+            
+            try {
+                if (editingRmKey) {
+                    await apiCall(`/roommates/${editingRmKey}`, 'PUT', formData);
+                    showAlert('Roommate pair updated successfully', 'success');
+                } else {
+                    await apiCall('/roommates', 'POST', formData);
+                    showAlert('Roommate pair added successfully', 'success');
+                }
+                closeModal();
+                loadRoommates();
+            } catch (error) {
+                showAlert('Failed to save roommate pair: ' + error.message, 'error');
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('roommateModal').addEventListener('click', (e) => {
+            if (e.target.id === 'roommateModal') {
+                closeModal();
+            }
+        });
+
+        // Load roommates on page load
+        loadRoommates();
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rooms Management - Hostel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Management System</h1>
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="hostels.html">Hostels</a>
+                <a href="students.html">Students</a>
+                <a href="rooms.html" class="active">Rooms</a>
+                <a href="batches.html">Batches</a>
+                <a href="administrators.html">Administrators</a>
+                <a href="roommates.html">Roommates</a>
+                <a href="room-alloc-zones.html">Room Allocation Zones</a>
+                <a href="allocation.html">Room Allocation</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Rooms Management</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Room</button>
+            </div>
+
+            <div class="search-filter">
+                <select id="hostelFilter" onchange="filterRooms()">
+                    <option value="">All Hostels</option>
+                </select>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hostel</th>
+                            <th>Phase</th>
+                            <th>Wing Code</th>
+                            <th>Floor</th>
+                            <th>Room No</th>
+                            <th>Bed ID</th>
+                            <th>Allotted To</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomsTable">
+                        <tr>
+                            <td colspan="9" class="loading">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="roomModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Room</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="roomForm">
+                <input type="hidden" id="room_id" name="room_id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hostel_id">Hostel *</label>
+                        <select id="hostel_id" name="hostel_id" required>
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="room_no">Room No *</label>
+                        <input type="text" id="room_no" name="room_no" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phase">Phase</label>
+                        <input type="text" id="phase" name="phase">
+                    </div>
+                    <div class="form-group">
+                        <label for="wing_code">Wing Code</label>
+                        <input type="text" id="wing_code" name="wing_code">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="floor_no">Floor No</label>
+                        <input type="number" id="floor_no" name="floor_no" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="bed_id">Bed ID</label>
+                        <select id="bed_id" name="bed_id">
+                            <option value="A1">A1</option>
+                            <option value="B1">B1</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="allotted_to">Allotted To (Student ID)</label>
+                    <input type="number" id="allotted_to" name="allotted_to" min="0">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let editingRoomId = null;
+        let hostels = [];
+        let students = [];
+        let allRooms = [];
+
+        // Load rooms
+        async function loadRooms() {
+            try {
+                allRooms = await apiCall('/rooms');
+                // Load hostels for filter
+                hostels = await apiCall('/hostels');
+                populateHostelFilter();
+                filterRooms();
+            } catch (error) {
+                showAlert('Failed to load rooms: ' + error.message, 'error');
+                showEmptyState(document.getElementById('roomsTable'), 'Failed to load rooms');
+            }
+        }
+
+        // Populate hostel filter dropdown
+        function populateHostelFilter() {
+            const filter = document.getElementById('hostelFilter');
+            filter.innerHTML = '<option value="">All Hostels</option>';
+            hostels.forEach(hostel => {
+                const option = document.createElement('option');
+                option.value = hostel.hostel_id;
+                option.textContent = hostel.hostel_name;
+                filter.appendChild(option);
+            });
+        }
+
+        // Filter rooms by hostel
+        function filterRooms() {
+            const selectedHostelId = document.getElementById('hostelFilter').value;
+            let filteredRooms = allRooms;
+            
+            if (selectedHostelId) {
+                filteredRooms = allRooms.filter(room => room.hostel_id == selectedHostelId);
+            }
+            
+            displayRooms(filteredRooms);
+        }
+
+        // Load hostels and students for dropdowns
+        async function loadDropdowns() {
+            try {
+                if (hostels.length === 0) {
+                    hostels = await apiCall('/hostels');
+                }
+                students = await apiCall('/students');
+                
+                populateSelect('hostel_id', hostels.map(h => ({ value: h.hostel_id, text: h.hostel_name })));
+            } catch (error) {
+                console.error('Failed to load dropdowns:', error);
+            }
+        }
+
+        // Display rooms in table
+        function displayRooms(rooms) {
+            const tbody = document.getElementById('roomsTable');
+            
+            if (rooms.length === 0) {
+                showEmptyState(tbody, 'No rooms found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+            rooms.forEach(room => {
+                const row = createTableRow(room, [
+                    'room_id',
+                    'hostel_name',
+                    'phase',
+                    'wing_code',
+                    'floor_no',
+                    'room_no',
+                    'bed_id',
+                    { key: 'student_name', formatter: (val) => val || (room.allotted_to ? `ID: ${room.allotted_to}` : 'Available') }
+                ], {
+                    edit: (data) => editRoom(data),
+                    delete: (data) => deleteRoom(data.room_id, `Room ${data.room_no}`)
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingRoomId = null;
+            document.getElementById('modalTitle').textContent = 'Add Room';
+            document.getElementById('roomForm').reset();
+            document.getElementById('roomModal').classList.add('active');
+            loadDropdowns();
+        }
+
+        // Edit room
+        async function editRoom(room) {
+            editingRoomId = room.room_id;
+            document.getElementById('modalTitle').textContent = 'Edit Room';
+            await loadDropdowns();
+            setFormData('roomForm', {
+                room_id: room.room_id,
+                hostel_id: room.hostel_id,
+                phase: room.phase || '',
+                wing_code: room.wing_code || '',
+                floor_no: room.floor_no || '',
+                room_no: room.room_no,
+                bed_id: room.bed_id || 'A1',
+                allotted_to: room.allotted_to || ''
+            });
+            document.getElementById('roomModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('roomModal').classList.remove('active');
+            document.getElementById('roomForm').reset();
+            editingRoomId = null;
+        }
+
+        // Delete room
+        async function deleteRoom(roomId, roomName) {
+            confirmDelete(`Are you sure you want to delete ${roomName}?`, async () => {
+                try {
+                    await apiCall(`/rooms/${roomId}`, 'DELETE');
+                    showAlert('Room deleted successfully', 'success');
+                    // Reload all rooms and refresh filter
+                    const selectedHostel = document.getElementById('hostelFilter').value;
+                    allRooms = await apiCall('/rooms');
+                    if (hostels.length === 0) {
+                        hostels = await apiCall('/hostels');
+                        populateHostelFilter();
+                    }
+                    filterRooms();
+                    document.getElementById('hostelFilter').value = selectedHostel;
+                } catch (error) {
+                    showAlert('Failed to delete room: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('roomForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = getFormData('roomForm');
+            delete formData.room_id;
+            
+            // Convert string values to appropriate types
+            if (formData.hostel_id) formData.hostel_id = parseInt(formData.hostel_id);
+            if (formData.floor_no) formData.floor_no = parseInt(formData.floor_no);
+            if (formData.allotted_to) formData.allotted_to = parseInt(formData.allotted_to);
+            if (!formData.allotted_to) formData.allotted_to = null;
+            
+            try {
+                if (editingRoomId) {
+                    await apiCall(`/rooms/${editingRoomId}`, 'PUT', formData);
+                    showAlert('Room updated successfully', 'success');
+                } else {
+                    await apiCall('/rooms', 'POST', formData);
+                    showAlert('Room added successfully', 'success');
+                }
+                closeModal();
+                // Reload all rooms and refresh filter
+                const selectedHostel = document.getElementById('hostelFilter').value;
+                allRooms = await apiCall('/rooms');
+                if (hostels.length === 0) {
+                    hostels = await apiCall('/hostels');
+                    populateHostelFilter();
+                }
+                filterRooms();
+                document.getElementById('hostelFilter').value = selectedHostel;
+            } catch (error) {
+                showAlert('Failed to save room: ' + error.message, 'error');
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('roomModal').addEventListener('click', (e) => {
+            if (e.target.id === 'roomModal') {
+                closeModal();
+            }
+        });
+
+        // Load rooms on page load
+        loadRooms();
+    </script>
+</body>
+</html>
+

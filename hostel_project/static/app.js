@@ -1,3 +1,10 @@
+// ---
+// THIS FILE HAS BEEN MODIFIED TO CONNECT TO THE FLASK BACKEND
+// ---
+
+// We will use port 5000 to match the Flask server
+const API_BASE_URL = "http://127.0.0.1:5001";
+
 // Navigation functions
 function showLanding() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -25,6 +32,9 @@ function adminLogin(event) {
   const email = document.getElementById('adminEmail').value;
   const password = document.getElementById('adminPassword').value;
   
+  // NOTE: This is still using the FAKE data.js login.
+  // We will replace this with a real '/api/login' fetch call
+  // after we confirm the allocation works.
   const admin = getAdminByEmail(email);
   if (admin && admin.password === password) {
     appState.currentUser = admin;
@@ -39,6 +49,7 @@ function studentLogin(event) {
   event.preventDefault();
   const rollNo = document.getElementById('studentRollNo').value;
   
+  // NOTE: This is still using the FAKE data.js login.
   const student = getStudentByRollNo(rollNo);
   if (student) {
     appState.currentUser = student;
@@ -61,15 +72,21 @@ function showAdminDashboard() {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
   
+  // Add listener for allocation form
+  // We do this instead of 'onclick' for better control
+  document.getElementById('allocationForm').addEventListener('submit', uploadAndRunAllocation);
+
+  
   // Load initial data
-  loadHostels();
-  loadStudents();
-  loadBatches();
-  loadZones();
+  loadHostels(); // This will now call the backend
+  loadStudents(); // This still uses fake data
+  loadBatches(); // This still uses fake data
+  loadZones(); // This still uses fake data
   populateHostelSelect();
 }
 
 function switchTab(tabName) {
+
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
   
@@ -84,9 +101,14 @@ function switchTab(tabName) {
 
 // Hostels Management
 async function loadHostels() {
-  const res = await fetch("http://127.0.0.1:5000/api/hostels");
-  const hostels = await res.json();
-
+  // NOTE: This function is now disconnected from data.js
+  // It will be empty until we add a real /api/hostels endpoint
+  // We will do this NEXT.
+  
+  // const res = await fetch(`${API_BASE_URL}/api/hostels`);
+  // const hostels = await res.json();
+  
+  // For now, let's keep using the fake data so the UI works
   const table = `
     <div class="data-table">
       <table>
@@ -624,9 +646,11 @@ function deleteZone(id) {
 
 // Room Allocation Algorithm
 async function uploadAndRunAllocation(event) {
-  event.preventDefault();
+  event.preventDefault(); // Stop the form from submitting normally
+  
   const fileInput = document.getElementById("preferenceFile");
   const selectedFile = fileInput.files[0];
+  const resultDiv = document.getElementById("allocation-output-box");
 
   if (!selectedFile) {
     showNotification("Please select a file first!", true);
@@ -634,57 +658,59 @@ async function uploadAndRunAllocation(event) {
   }
 
   try {
+    resultDiv.innerHTML = `<p>Uploading file...</p>`;
     showNotification("Uploading file...", false);
 
     // ✅ Step 1: Upload to Flask backend
     const formData = new FormData();
     formData.append("file", selectedFile);
 
-    const uploadRes = await fetch("http://127.0.0.1:5000/api/upload", {
+    const uploadRes = await fetch(`${API_BASE_URL}/api/upload`, {
       method: "POST",
       body: formData
     });
 
-    const uploadData = await uploadRes.json();
-    if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
+    const uploadData = await uplcoadRes.json();
+    if (!uploadData.success) throw new Error(uploadData.error || "Upload failed");
 
     const uploaded_path = uploadData.uploaded_path;
+    resultDiv.innerHTML = `<p>File uploaded. Running allocation...</p>`;
     showNotification("File uploaded successfully. Starting allocation...");
 
     // ✅ Step 2: Tell backend to run allocation
-    const runRes = await fetch("http://127.0.0.1:5000/api/run-allocation", {
+    const runRes = await fetch(`${API_BASE_URL}/api/run-allocation`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uploaded_path })
     });
 
     const resultData = await runRes.json();
-    if (!runRes.ok) throw new Error(resultData.error || "Allocation failed");
+    if (!resultData.success) throw new Error(resultData.error || "Allocation failed");
 
     console.log("Allocation result:", resultData);
     showNotification("✅ Allocation completed successfully!");
-    // 1. Get the path from the result
-    const serverFilePath = resultData.result.final_file;
-    
-    // 2. Get just the filename (e.g., "batch_constrained_allocation.xlsx")
-    const filename = serverFilePath.split(/\/|\\/).pop(); // Splits by / or \
 
-    // 3. Create a download link
-    const downloadUrl = `http://127.0.0.1:5000/api/download/${filename}`;
+    // ✅ Step 3: Show download link
+    // The backend now returns 'output_filename'
+    const filename = 
     
-    // 4. Show it to the user (you can make this look nicer)
-    const resultDiv = document.getElementById("allocationResult"); // Assuming you have a <div>
+    resultData.output_filename; 
+    
+    const downloadUrl = `${API_BASE_URL}/api/download/${filename}`;
+    
+    // 4. Show it to the user
     resultDiv.innerHTML = `
-      <p>Allocation complete.</p>
-      <a href="${downloadUrl}" class="btn" download>Download Allotment File</a>
+      <p style="color: var(--color-success); font-weight: 500;">Allocation complete.</p>
+      <a href="${downloadUrl}" class="btn btn--primary" download style="margin-top: 10px;">Download Allotment File</a>
     `;
   } 
   
   catch (err) {
     console.error(err);
-    showNotification(`Error: ${err.message}`, true);
+    const errorMsg = `Error: ${err.message}`;
+    showNotification(errorMsg, true);
+    resultDiv.innerHTML = `<p style="color: var(--color-error);">${errorMsg}</p>`;
   }
-
 }
 
 //Student Dashboard

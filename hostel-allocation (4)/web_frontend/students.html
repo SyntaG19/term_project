@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students Management - Hostel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Management System</h1>
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="hostels.html">Hostels</a>
+                <a href="students.html" class="active">Students</a>
+                <a href="rooms.html">Rooms</a>
+                <a href="batches.html">Batches</a>
+                <a href="administrators.html">Administrators</a>
+                <a href="roommates.html">Roommates</a>
+                <a href="room-alloc-zones.html">Room Allocation Zones</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Students Management</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Student</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Roll No</th>
+                            <th>Name</th>
+                            <th>Year</th>
+                            <th>Gender</th>
+                            <th>Department</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Hostel</th>
+                            <th>Batch</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTable">
+                        <tr>
+                            <td colspan="11" class="loading">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Student</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="studentForm">
+                <input type="hidden" id="student_id" name="student_id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="roll_no">Roll No *</label>
+                        <input type="text" id="roll_no" name="roll_no" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Name *</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="year">Year *</label>
+                        <input type="number" id="year" name="year" min="1" max="4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Gender *</label>
+                        <select id="gender" name="gender" required>
+                            <option value="">Select...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="department">Department</label>
+                    <input type="text" id="department" name="department">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hostel_id">Hostel *</label>
+                        <select id="hostel_id" name="hostel_id" required>
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch_id">Batch</label>
+                        <select id="batch_id" name="batch_id">
+                            <option value="">Select...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="rm_key">Roommate Key</label>
+                    <input type="number" id="rm_key" name="rm_key" min="0" value="0">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let editingStudentId = null;
+        let hostels = [];
+        let batches = [];
+
+        // Load students
+        async function loadStudents() {
+            try {
+                const students = await apiCall('/students');
+                displayStudents(students);
+            } catch (error) {
+                showAlert('Failed to load students: ' + error.message, 'error');
+                showEmptyState(document.getElementById('studentsTable'), 'Failed to load students');
+            }
+        }
+
+        // Load hostels and batches for dropdowns
+        async function loadDropdowns() {
+            try {
+                hostels = await apiCall('/hostels');
+                batches = await apiCall('/batches');
+                
+                populateSelect('hostel_id', hostels.map(h => ({ value: h.hostel_id, text: h.hostel_name })));
+                populateSelect('batch_id', batches.map(b => ({ value: b.batch_id, text: b.batch_id })));
+            } catch (error) {
+                console.error('Failed to load dropdowns:', error);
+            }
+        }
+
+        // Display students in table
+        function displayStudents(students) {
+            const tbody = document.getElementById('studentsTable');
+            
+            if (students.length === 0) {
+                showEmptyState(tbody, 'No students found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+            students.forEach(student => {
+                const row = createTableRow(student, [
+                    'student_id',
+                    'roll_no',
+                    'name',
+                    'year',
+                    'gender',
+                    'department',
+                    'email',
+                    'phone',
+                    'hostel_name',
+                    'batch_name'
+                ], {
+                    edit: (data) => editStudent(data),
+                    delete: (data) => deleteStudent(data.student_id, data.name)
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingStudentId = null;
+            document.getElementById('modalTitle').textContent = 'Add Student';
+            document.getElementById('studentForm').reset();
+            document.getElementById('studentModal').classList.add('active');
+            loadDropdowns();
+        }
+
+        // Edit student
+        function editStudent(student) {
+            editingStudentId = student.student_id;
+            document.getElementById('modalTitle').textContent = 'Edit Student';
+            loadDropdowns().then(() => {
+                setFormData('studentForm', {
+                    student_id: student.student_id,
+                    roll_no: student.roll_no,
+                    name: student.name,
+                    year: student.year,
+                    gender: student.gender,
+                    department: student.department || '',
+                    email: student.email || '',
+                    phone: student.phone || '',
+                    hostel_id: student.hostel_id,
+                    batch_id: student.batch_id || '',
+                    rm_key: student.rm_key || 0
+                });
+            });
+            document.getElementById('studentModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('studentModal').classList.remove('active');
+            document.getElementById('studentForm').reset();
+            editingStudentId = null;
+        }
+
+        // Delete student
+        async function deleteStudent(studentId, studentName) {
+            confirmDelete(`Are you sure you want to delete student "${studentName}"?`, async () => {
+                try {
+                    await apiCall(`/students/${studentId}`, 'DELETE');
+                    showAlert('Student deleted successfully', 'success');
+                    loadStudents();
+                } catch (error) {
+                    showAlert('Failed to delete student: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('studentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = getFormData('studentForm');
+            delete formData.student_id;
+            
+            // Convert string values to appropriate types
+            if (formData.year) formData.year = parseInt(formData.year);
+            if (formData.rm_key) formData.rm_key = parseInt(formData.rm_key);
+            if (formData.hostel_id) formData.hostel_id = parseInt(formData.hostel_id);
+            if (!formData.batch_id) formData.batch_id = null;
+            if (!formData.rm_key) formData.rm_key = 0;
+            
+            try {
+                if (editingStudentId) {
+                    await apiCall(`/students/${editingStudentId}`, 'PUT', formData);
+                    showAlert('Student updated successfully', 'success');
+                } else {
+                    await apiCall('/students', 'POST', formData);
+                    showAlert('Student added successfully', 'success');
+                }
+                closeModal();
+                loadStudents();
+            } catch (error) {
+                showAlert('Failed to save student: ' + error.message, 'error');
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('studentModal').addEventListener('click', (e) => {
+            if (e.target.id === 'studentModal') {
+                closeModal();
+            }
+        });
+
+        // Load students on page load
+        loadStudents();
+    </script>
+</body>
+</html>

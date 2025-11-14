@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrators Management - Hostel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Allocation System</h1>
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="hostels.html">Hostels</a>
+                <a href="students.html">Students</a>
+                <a href="rooms.html">Rooms</a>
+                <a href="batches.html">Batches</a>
+                <a href="administrators.html" class="active">Administrators</a>
+                <a href="roommates.html">Roommates</a>
+                <a href="room-alloc-zones.html">Room Allocation Zones</a>
+                <a href="allocation.html">Room Allocation</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Administrators Management</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Administrator</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Designation</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Hostel</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="administratorsTable">
+                        <tr>
+                            <td colspan="8" class="loading">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="administratorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Administrator</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="administratorForm">
+                <input type="hidden" id="admin_id" name="admin_id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">First Name *</label>
+                        <input type="text" id="first_name" name="first_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Last Name *</label>
+                        <input type="text" id="last_name" name="last_name" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="designation">Designation *</label>
+                    <input type="text" id="designation" name="designation" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_phone">Phone</label>
+                        <input type="tel" id="contact_phone" name="contact_phone">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="hostel_id">Hostel *</label>
+                    <select id="hostel_id" name="hostel_id" required>
+                        <option value="">Select...</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let editingAdminId = null;
+        let hostels = [];
+
+        // Load administrators
+        async function loadAdministrators() {
+            try {
+                const administrators = await apiCall('/administrators');
+                displayAdministrators(administrators);
+            } catch (error) {
+                showAlert('Failed to load administrators: ' + error.message, 'error');
+                showEmptyState(document.getElementById('administratorsTable'), 'Failed to load administrators');
+            }
+        }
+
+        // Load hostels for dropdown
+        async function loadDropdowns() {
+            try {
+                hostels = await apiCall('/hostels');
+                populateSelect('hostel_id', hostels.map(h => ({ value: h.hostel_id, text: h.hostel_name })));
+            } catch (error) {
+                console.error('Failed to load dropdowns:', error);
+            }
+        }
+
+        // Display administrators in table
+        function displayAdministrators(administrators) {
+            const tbody = document.getElementById('administratorsTable');
+            
+            if (administrators.length === 0) {
+                showEmptyState(tbody, 'No administrators found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+            administrators.forEach(admin => {
+                const row = createTableRow(admin, [
+                    'admin_id',
+                    'first_name',
+                    'last_name',
+                    'designation',
+                    'email',
+                    'contact_phone',
+                    'hostel_name'
+                ], {
+                    edit: (data) => editAdministrator(data),
+                    delete: (data) => deleteAdministrator(data.admin_id, `${data.first_name} ${data.last_name}`)
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingAdminId = null;
+            document.getElementById('modalTitle').textContent = 'Add Administrator';
+            document.getElementById('administratorForm').reset();
+            document.getElementById('administratorModal').classList.add('active');
+            loadDropdowns();
+        }
+
+        // Edit administrator
+        function editAdministrator(admin) {
+            editingAdminId = admin.admin_id;
+            document.getElementById('modalTitle').textContent = 'Edit Administrator';
+            loadDropdowns().then(() => {
+                setFormData('administratorForm', {
+                    admin_id: admin.admin_id,
+                    first_name: admin.first_name,
+                    last_name: admin.last_name,
+                    designation: admin.designation,
+                    email: admin.email || '',
+                    contact_phone: admin.contact_phone || '',
+                    hostel_id: admin.hostel_id
+                });
+            });
+            document.getElementById('administratorModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('administratorModal').classList.remove('active');
+            document.getElementById('administratorForm').reset();
+            editingAdminId = null;
+        }
+
+        // Delete administrator
+        async function deleteAdministrator(adminId, adminName) {
+            confirmDelete(`Are you sure you want to delete administrator "${adminName}"?`, async () => {
+                try {
+                    await apiCall(`/administrators/${adminId}`, 'DELETE');
+                    showAlert('Administrator deleted successfully', 'success');
+                    loadAdministrators();
+                } catch (error) {
+                    showAlert('Failed to delete administrator: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('administratorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = getFormData('administratorForm');
+            delete formData.admin_id;
+            
+            // Convert string values to appropriate types
+            if (formData.hostel_id) formData.hostel_id = parseInt(formData.hostel_id);
+            
+            try {
+                if (editingAdminId) {
+                    await apiCall(`/administrators/${editingAdminId}`, 'PUT', formData);
+                    showAlert('Administrator updated successfully', 'success');
+                } else {
+                    await apiCall('/administrators', 'POST', formData);
+                    showAlert('Administrator added successfully', 'success');
+                }
+                closeModal();
+                loadAdministrators();
+            } catch (error) {
+                showAlert('Failed to save administrator: ' + error.message, 'error');
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('administratorModal').addEventListener('click', (e) => {
+            if (e.target.id === 'administratorModal') {
+                closeModal();
+            }
+        });
+
+        // Load administrators on page load
+        loadAdministrators();
+    </script>
+</body>
+</html>
+
+
+

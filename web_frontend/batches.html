@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batches Management - Hostel Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Hostel Allocation System</h1>
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="hostels.html">Hostels</a>
+                <a href="students.html">Students</a>
+                <a href="rooms.html">Rooms</a>
+                <a href="batches.html" class="active">Batches</a>
+                <a href="administrators.html">Administrators</a>
+                <a href="roommates.html">Roommates</a>
+                <a href="room-alloc-zones.html">Room Allocation Zones</a>
+                <a href="allocation.html">Room Allocation</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="page-header">
+                <h2>Batches Management</h2>
+                <button class="btn btn-primary" onclick="openAddModal()">Add Batch</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Batch ID</th>
+                            <th>Batch Name</th>
+                            <th>Program</th>
+                            <th>Year of Study</th>
+                            <th>Remarks</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchesTable">
+                        <tr>
+                            <td colspan="6" class="loading">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="batchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Batch</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="batchForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batch_id">Batch ID *</label>
+                        <input type="text" id="batch_id" name="batch_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch_name">Batch Name *</label>
+                        <input type="text" id="batch_name" name="batch_name" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="program">Program *</label>
+                        <select id="program" name="program" required>
+                            <option value="">Select...</option>
+                            <option value="UG">UG</option>
+                            <option value="MTech">MTech</option>
+                            <option value="PhD">PhD</option>
+                            <option value="Guest">Guest</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="year_of_study">Year of Study</label>
+                        <input type="number" id="year_of_study" name="year_of_study" min="1" max="10">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="remarks">Remarks</label>
+                    <textarea id="remarks" name="remarks" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let editingBatchId = null;
+
+        // Load batches
+        async function loadBatches() {
+            try {
+                const batches = await apiCall('/batches');
+                displayBatches(batches);
+            } catch (error) {
+                showAlert('Failed to load batches: ' + error.message, 'error');
+                showEmptyState(document.getElementById('batchesTable'), 'Failed to load batches');
+            }
+        }
+
+        // Display batches in table
+        function displayBatches(batches) {
+            const tbody = document.getElementById('batchesTable');
+            
+            if (batches.length === 0) {
+                showEmptyState(tbody, 'No batches found');
+                return;
+            }
+
+            tbody.innerHTML = '';
+            batches.forEach(batch => {
+                const row = createTableRow(batch, [
+                    'batch_id',
+                    'batch_name',
+                    'program',
+                    'year_of_study',
+                    'remarks'
+                ], {
+                    edit: (data) => editBatch(data),
+                    delete: (data) => deleteBatch(data.batch_id, data.batch_name)
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open add modal
+        function openAddModal() {
+            editingBatchId = null;
+            document.getElementById('modalTitle').textContent = 'Add Batch';
+            document.getElementById('batchForm').reset();
+            document.getElementById('batch_id').disabled = false;
+            document.getElementById('batchModal').classList.add('active');
+        }
+
+        // Edit batch
+        function editBatch(batch) {
+            editingBatchId = batch.batch_id;
+            document.getElementById('modalTitle').textContent = 'Edit Batch';
+            document.getElementById('batch_id').disabled = true;
+            setFormData('batchForm', {
+                batch_id: batch.batch_id,
+                batch_name: batch.batch_name,
+                program: batch.program,
+                year_of_study: batch.year_of_study || '',
+                remarks: batch.remarks || ''
+            });
+            document.getElementById('batchModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('batchModal').classList.remove('active');
+            document.getElementById('batchForm').reset();
+            editingBatchId = null;
+        }
+
+        // Delete batch
+        async function deleteBatch(batchId, batchName) {
+            confirmDelete(`Are you sure you want to delete batch "${batchName}"?`, async () => {
+                try {
+                    await apiCall(`/batches/${batchId}`, 'DELETE');
+                    showAlert('Batch deleted successfully', 'success');
+                    loadBatches();
+                } catch (error) {
+                    showAlert('Failed to delete batch: ' + error.message, 'error');
+                }
+            });
+        }
+
+        // Handle form submission
+        document.getElementById('batchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = getFormData('batchForm');
+            
+            // Convert string values to appropriate types
+            if (formData.year_of_study) formData.year_of_study = parseInt(formData.year_of_study);
+            if (!formData.year_of_study) formData.year_of_study = null;
+            if (!formData.remarks) formData.remarks = null;
+            
+            try {
+                if (editingBatchId) {
+                    await apiCall(`/batches/${editingBatchId}`, 'PUT', formData);
+                    showAlert('Batch updated successfully', 'success');
+                } else {
+                    await apiCall('/batches', 'POST', formData);
+                    showAlert('Batch added successfully', 'success');
+                }
+                closeModal();
+                loadBatches();
+            } catch (error) {
+                showAlert('Failed to save batch: ' + error.message, 'error');
+            }
+        });
+
+        // Close modal on outside click
+        document.getElementById('batchModal').addEventListener('click', (e) => {
+            if (e.target.id === 'batchModal') {
+                closeModal();
+            }
+        });
+
+        // Load batches on page load
+        loadBatches();
+    </script>
+</body>
+</html>
+
+
+

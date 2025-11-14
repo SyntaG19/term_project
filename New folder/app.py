@@ -955,20 +955,11 @@ def fill_remaining():
             return jsonify({"error": "Initial filename not provided"}), 400
         
         initial_file_path = os.path.join(OUTPUT_FOLDER, initial_filename)
-        print(f"Looking for file: {initial_file_path}")
-        
         if not os.path.exists(initial_file_path):
-            # Try to find the file with different path
-            print(f"File not found at {initial_file_path}, checking OUTPUT_FOLDER: {OUTPUT_FOLDER}")
-            if os.path.exists(OUTPUT_FOLDER):
-                files = os.listdir(OUTPUT_FOLDER)
-                print(f"Files in OUTPUT_FOLDER: {files}")
-            return jsonify({"error": f"Initial allocation file not found: {initial_filename}"}), 404
+            return jsonify({"error": "Initial allocation file not found"}), 404
         
-        print(f"File found, starting fill_remaining_rooms...")
         # Run fill remaining rooms
         result = fill_remaining_rooms(initial_file_path, OUTPUT_FOLDER)
-        print(f"Fill remaining completed successfully")
         
         return jsonify({
             "message": "Remaining rooms allocated successfully",
@@ -976,13 +967,8 @@ def fill_remaining():
         }), 200
     except Exception as e:
         import traceback
-        error_trace = traceback.format_exc()
-        print(f"Error in fill_remaining endpoint:\n{error_trace}")
         traceback.print_exc()
-        return jsonify({
-            "error": str(e),
-            "traceback": error_trace
-        }), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/allocation/clear', methods=['POST'])
 def clear_allocations():
@@ -1073,14 +1059,10 @@ def upload_to_database():
         file.save(temp_path)
         
         # Read Excel file
-        print(f"Reading Excel file: {temp_path}")
         df = pd.read_excel(temp_path, engine='openpyxl')
         df.columns = [str(c).strip() for c in df.columns]
         
-        print(f"Excel columns found: {list(df.columns)}")
-        print(f"Total rows in Excel: {len(df)}")
-        
-        # Find columns in Excel - be more flexible with matching
+        # Find columns in Excel
         name_col = None
         student_id_col = None
         email_col = None
@@ -1091,72 +1073,32 @@ def upload_to_database():
         phone_col = None
         
         for col in df.columns:
-            col_lower = col.lower().strip()
-            # Name column
-            if not name_col:
-                if 'name' in col_lower and 'full' in col_lower:
+            col_lower = col.lower()
+            if 'name' in col_lower and 'full' not in col_lower:
+                if not name_col:
                     name_col = col
-                elif 'name' in col_lower and col_lower != 'student_id':
-                    name_col = col
-            
-            # Student ID column - check multiple variations
-            if not student_id_col:
-                if col_lower == 'student_id' or col_lower == 'studentid':
-                    student_id_col = col
-                elif 'student_id' in col_lower or 'student id' in col_lower:
-                    student_id_col = col
-                elif 'roll' in col_lower and ('no' in col_lower or 'number' in col_lower):
-                    student_id_col = col
-                elif col_lower == 'roll_no' or col_lower == 'rollno':
-                    student_id_col = col
-            
-            # Email column
-            if not email_col and 'email' in col_lower:
+            elif 'full name' in col_lower:
+                name_col = col
+            elif 'student' in col_lower and 'id' in col_lower:
+                student_id_col = col
+            elif 'email' in col_lower:
                 email_col = col
-            
-            # Batch column
-            if not batch_col and 'batch' in col_lower:
+            elif 'batch' in col_lower:
                 batch_col = col
-            
-            # Room column
-            if not room_col:
-                if 'allocated_room' in col_lower or 'allocated room' in col_lower:
-                    room_col = col
-                elif 'room' in col_lower and 'allocated' in col_lower:
-                    room_col = col
-            
-            # Year column
-            if not year_col and 'year' in col_lower:
+            elif 'allocated' in col_lower and 'room' in col_lower:
+                room_col = col
+            elif 'year' in col_lower:
                 year_col = col
-            
-            # Department column
-            if not department_col:
-                if 'department' in col_lower or 'dept' in col_lower:
-                    department_col = col
-            
-            # Phone column
-            if not phone_col:
-                if 'phone' in col_lower or 'contact' in col_lower or 'mobile' in col_lower:
-                    phone_col = col
-        
-        print(f"Detected columns:")
-        print(f"  Name: {name_col}")
-        print(f"  Student ID: {student_id_col}")
-        print(f"  Email: {email_col}")
-        print(f"  Batch: {batch_col}")
-        print(f"  Room: {room_col}")
-        print(f"  Year: {year_col}")
-        print(f"  Department: {department_col}")
-        print(f"  Phone: {phone_col}")
+            elif 'department' in col_lower or 'dept' in col_lower:
+                department_col = col
+            elif 'phone' in col_lower or 'contact' in col_lower:
+                phone_col = col
         
         if not room_col:
-            return jsonify({"error": f"Could not find 'Allocated_Room' column in the Excel file. Available columns: {list(df.columns)}"}), 400
+            return jsonify({"error": "Could not find 'Allocated_Room' column in the Excel file"}), 400
         
         if not name_col:
-            return jsonify({"error": f"Could not find 'Name' column in the Excel file. Available columns: {list(df.columns)}"}), 400
-        
-        if not student_id_col:
-            return jsonify({"error": f"Could not find 'Student_ID' or 'Roll No' column in the Excel file. Available columns: {list(df.columns)}"}), 400
+            return jsonify({"error": "Could not find 'Name' column in the Excel file"}), 400
         
         conn = get_connection()
         if not conn:
@@ -1198,63 +1140,37 @@ def upload_to_database():
             return batch_str if batch_str else None
         
         # Process each row
-        print(f"\nStarting to process {len(df)} rows...")
         for idx, row in df.iterrows():
             try:
-                # Get allocated room
-                room_val = row.get(room_col)
-                if pd.isna(room_val):
-                    continue  # Skip if no room allocated
+                allocated_room = str(row.get(room_col)).strip() if pd.notna(row.get(room_col)) else None
                 
-                allocated_room = str(room_val).strip()
-                if allocated_room.lower() == 'nan' or allocated_room == '' or allocated_room == 'None':
-                    continue  # Skip if no room allocated
-                
-                # Extract data from Excel
-                name_val = row.get(name_col)
-                if pd.isna(name_val):
-                    error_count += 1
-                    errors.append(f"Row {idx + 2}: Name is missing")
+                # Skip if no room allocated
+                if not allocated_room or allocated_room.lower() == 'nan' or allocated_room == '':
                     continue
                 
-                name = str(name_val).strip()
-                if not name or name.lower() == 'nan':
+                # Extract data from Excel
+                name = str(row.get(name_col)).strip() if pd.notna(row.get(name_col)) else None
+                if not name:
                     error_count += 1
                     errors.append(f"Row {idx + 2}: Name is required")
                     continue
                 
-                # Get roll_no/student_id
                 roll_no = None
-                if student_id_col:
-                    roll_no_val = row.get(student_id_col)
-                    if pd.notna(roll_no_val):
-                        roll_no = str(roll_no_val).strip()
-                        # Remove .0 if it's a float
-                        if roll_no.endswith('.0'):
-                            roll_no = roll_no[:-2]
+                if student_id_col and pd.notna(row.get(student_id_col)):
+                    roll_no = str(row.get(student_id_col)).strip()
                 
-                if not roll_no or roll_no.lower() == 'nan':
+                if not roll_no:
                     error_count += 1
-                    errors.append(f"Row {idx + 2}: Student ID/Roll No is required (found: {roll_no_val if 'roll_no_val' in locals() else 'N/A'})")
+                    errors.append(f"Row {idx + 2}: Student ID/Roll No is required")
                     continue
                 
-                # Get email
-                email = None
-                if email_col:
-                    email_val = row.get(email_col)
-                    if pd.notna(email_val):
-                        email = str(email_val).strip()
-                        if email.lower() == 'nan' or email == '':
-                            email = None
+                email = str(row.get(email_col)).strip() if email_col and pd.notna(row.get(email_col)) else None
+                if email and email.lower() == 'nan':
+                    email = None
                 
-                # Get batch
-                batch_str = None
-                if batch_col:
-                    batch_val = row.get(batch_col)
-                    if pd.notna(batch_val):
-                        batch_str = str(batch_val).strip()
-                        if batch_str.lower() == 'nan' or batch_str == '':
-                            batch_str = None
+                batch_str = str(row.get(batch_col)).strip() if batch_col and pd.notna(row.get(batch_col)) else None
+                if batch_str and batch_str.lower() == 'nan':
+                    batch_str = None
                 
                 gender = extract_gender_from_batch(batch_str) if batch_str else None
                 batch_id = extract_batch_id(batch_str) if batch_str else None
@@ -1266,36 +1182,20 @@ def upload_to_database():
                     if not batch_check:
                         batch_id = None  # Don't assign invalid batch_id
                 
-                # Get year
                 year = None
-                if year_col:
-                    year_val = row.get(year_col)
-                    if pd.notna(year_val):
-                        try:
-                            year = int(float(year_val))
-                        except:
-                            pass
+                if year_col and pd.notna(row.get(year_col)):
+                    try:
+                        year = int(float(row.get(year_col)))
+                    except:
+                        pass
                 
-                # Get department
-                department = None
-                if department_col:
-                    dept_val = row.get(department_col)
-                    if pd.notna(dept_val):
-                        department = str(dept_val).strip()
-                        if department.lower() == 'nan' or department == '':
-                            department = None
+                department = str(row.get(department_col)).strip() if department_col and pd.notna(row.get(department_col)) else None
+                if department and department.lower() == 'nan':
+                    department = None
                 
-                # Get phone
-                phone = None
-                if phone_col:
-                    phone_val = row.get(phone_col)
-                    if pd.notna(phone_val):
-                        phone = str(phone_val).strip()
-                        # Remove .0 if it's a float
-                        if phone.endswith('.0'):
-                            phone = phone[:-2]
-                        if phone.lower() == 'nan' or phone == '':
-                            phone = None
+                phone = str(row.get(phone_col)).strip() if phone_col and pd.notna(row.get(phone_col)) else None
+                if phone and phone.lower() == 'nan':
+                    phone = None
                 
                 # Default gender if not found
                 if not gender:
@@ -1320,7 +1220,7 @@ def upload_to_database():
                     if gender:
                         update_fields.append("gender = %s")
                         update_values.append(gender)
-                    if year is not None:
+                    if year:
                         update_fields.append("year = %s")
                         update_values.append(year)
                     if department:
@@ -1332,8 +1232,9 @@ def upload_to_database():
                     if batch_id:
                         update_fields.append("batch_id = %s")
                         update_values.append(batch_id)
-                    update_fields.append("hostel_id = %s")
-                    update_values.append(hostel_id)
+                    if hostel_id:
+                        update_fields.append("hostel_id = %s")
+                        update_values.append(hostel_id)
                     
                     if update_fields:
                         update_values.append(student_id)
@@ -1345,50 +1246,20 @@ def upload_to_database():
                     if not gender:
                         gender = 'Other'  # Required field
                     
-                    try:
-                        cur.execute("""
-                            INSERT INTO student (roll_no, name, year, gender, department, phone, email, 
-                                               rm_key, hostel_id, batch_id)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (
-                            roll_no, name, year, gender, department, phone, email, 0, hostel_id, batch_id
-                        ))
-                        student_id = cur.lastrowid
-                        students_created += 1
-                    except Exception as insert_error:
-                        # Check if it's a duplicate roll_no error
-                        if "Duplicate entry" in str(insert_error) or "UNIQUE constraint" in str(insert_error):
-                            # Try to update instead
-                            cur.execute("SELECT student_id FROM student WHERE roll_no = %s", (roll_no,))
-                            existing = cur.fetchone()
-                            if existing:
-                                student_id = existing['student_id']
-                                # Update the student
-                                cur.execute("""
-                                    UPDATE student SET name = %s, year = %s, gender = %s, department = %s, 
-                                    phone = %s, email = %s, hostel_id = %s, batch_id = %s
-                                    WHERE student_id = %s
-                                """, (name, year, gender, department, phone, email, hostel_id, batch_id, student_id))
-                                students_updated += 1
-                            else:
-                                raise insert_error
-                        else:
-                            raise insert_error
+                    cur.execute("""
+                        INSERT INTO student (roll_no, name, year, gender, department, phone, email, 
+                                           rm_key, hostel_id, batch_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        roll_no, name, year, gender, department, phone, email, 0, hostel_id, batch_id
+                    ))
+                    student_id = cur.lastrowid
+                    students_created += 1
                 
                 # Handle room allocation
-                room_no = str(allocated_room).strip()
+                room_no = allocated_room
                 
-                # Clean room number - remove any non-digit characters
-                # Room format should be like 2001, 3001, etc.
-                room_no_clean = ''.join(c for c in room_no if c.isdigit())
-                if len(room_no_clean) >= 4:
-                    room_no = room_no_clean
-                elif len(room_no_clean) == 3:
-                    # If 3 digits, might be missing floor, skip for now
-                    print(f"Warning: Room number '{room_no}' has unusual format, skipping room allocation")
-                    continue
-                
-                # Try to extract floor from room number (first digit)
+                # Try to extract floor from room number
                 floor_no = None
                 if len(room_no) >= 4 and room_no[0].isdigit():
                     try:
@@ -1396,10 +1267,10 @@ def upload_to_database():
                     except:
                         pass
                 
-                # Check if room exists (try without bed_id constraint first, as bed_id might not exist)
+                # Check if room exists
                 cur.execute("""
                     SELECT room_id, allotted_to FROM room 
-                    WHERE hostel_id = %s AND room_no = %s
+                    WHERE hostel_id = %s AND room_no = %s AND bed_id = 'A1'
                     LIMIT 1
                 """, (hostel_id, room_no))
                 room_info = cur.fetchone()
@@ -1407,70 +1278,31 @@ def upload_to_database():
                 if room_info:
                     # Update existing room
                     if room_info['allotted_to'] and room_info['allotted_to'] != student_id:
-                        # Clear old allocation first (all beds in this room)
+                        # Clear old allocation first
                         cur.execute("UPDATE room SET allotted_to = NULL WHERE room_id = %s", (room_info['room_id'],))
                     
-                    # Update the room allocation
                     cur.execute("""
                         UPDATE room SET allotted_to = %s 
                         WHERE room_id = %s
                     """, (student_id, room_info['room_id']))
                     rooms_allocated += 1
                 else:
-                    # Create new room - try with bed_id first, then without if it fails
-                    try:
-                        cur.execute("""
-                            INSERT INTO room (hostel_id, room_no, floor_no, bed_id, allotted_to)
-                            VALUES (%s, %s, %s, %s, %s)
-                        """, (hostel_id, room_no, floor_no, 'A1', student_id))
-                        rooms_allocated += 1
-                    except Exception as room_error:
-                        # If bed_id column doesn't exist, try without it
-                        error_str = str(room_error).lower()
-                        if "bed_id" in error_str or "unknown column" in error_str or "doesn't exist" in error_str:
-                            try:
-                                cur.execute("""
-                                    INSERT INTO room (hostel_id, room_no, floor_no, allotted_to)
-                                    VALUES (%s, %s, %s, %s)
-                                """, (hostel_id, room_no, floor_no, student_id))
-                                rooms_allocated += 1
-                            except Exception as room_error2:
-                                error_count += 1
-                                errors.append(f"Row {idx + 2}: Could not create room {room_no}: {str(room_error2)}")
-                                print(f"Error creating room {room_no} for student {roll_no}: {room_error2}")
-                                continue
-                        else:
-                            # Re-raise if it's a different error
-                            error_count += 1
-                            errors.append(f"Row {idx + 2}: Room allocation error: {str(room_error)}")
-                            print(f"Error allocating room {room_no} for student {roll_no}: {room_error}")
-                            continue
+                    # Create new room
+                    cur.execute("""
+                        INSERT INTO room (hostel_id, room_no, floor_no, bed_id, allotted_to)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (hostel_id, room_no, floor_no, 'A1', student_id))
+                    rooms_allocated += 1
                 
             except Exception as e:
                 error_count += 1
                 error_msg = str(e)
-                import traceback
-                error_details = traceback.format_exc()
                 errors.append(f"Row {idx + 2}: {error_msg}")
-                # Only print first few errors to avoid spam
-                if error_count <= 5:
-                    print(f"Error in row {idx + 2}: {error_msg}")
-                    print(f"Row data: Name={row.get(name_col) if name_col else 'N/A'}, Roll={row.get(student_id_col) if student_id_col else 'N/A'}, Room={allocated_room if 'allocated_room' in locals() else 'N/A'}")
                 continue
         
         conn.commit()
         cur.close()
         conn.close()
-        
-        print(f"\nProcessing complete:")
-        print(f"  Students created: {students_created}")
-        print(f"  Students updated: {students_updated}")
-        print(f"  Rooms allocated: {rooms_allocated}")
-        print(f"  Errors: {error_count}")
-        if error_count > 0 and len(errors) > 0:
-            print(f"\nFirst 10 errors:")
-            for err in errors[:10]:
-                print(f"  - {err}")
         
         # Clean up temp file
         try:
@@ -1480,7 +1312,7 @@ def upload_to_database():
         
         message = f"Successfully processed: {students_created} students created, {students_updated} students updated, {rooms_allocated} rooms allocated"
         if error_count > 0:
-            message += f"\n{error_count} errors occurred. Check backend terminal for details."
+            message += f". {error_count} errors occurred."
         
         return jsonify({
             "message": message,
@@ -1488,7 +1320,7 @@ def upload_to_database():
             "students_updated": students_updated,
             "rooms_allocated": rooms_allocated,
             "error_count": error_count,
-            "errors": errors[:30]  # Return first 30 errors
+            "errors": errors[:20]  # Return first 20 errors
         }), 200
         
     except Exception as e:
